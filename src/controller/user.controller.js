@@ -37,7 +37,7 @@ const userRegister = async (req, res) => {
     //console.log(req.files);
 
     const avatarLocalPath = req.files?.avatar[0]?.path
-    //const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
     let coverImageLocalPath
     if (
@@ -89,6 +89,14 @@ const userRegister = async (req, res) => {
       message: 'Something went wrong while registering the user',
       error: error,
     })
+  }
+}
+
+const loginUser = async (req, res) => {
+  const { username, email, password } = req.body
+
+  if (!username && !email) {
+    throw new createHttpError(400, 'Username or email is required')
   }
 }
 
