@@ -37,6 +37,11 @@ app.get('/', (req, res) => {
   })
 })
 
+// route registration
+import { userRouter } from './router/user.router.js'
+
+app.use('/api/v1/users', userRouter)
+
 // error handler
 app.use(globalAsnycErrorHandler)
 
