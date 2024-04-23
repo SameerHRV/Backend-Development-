@@ -273,10 +273,63 @@ const changeCurrentUserPassword = async (req, res) => {
   }
 }
 
+const getcurrentUser = async (req, res) => {
+  try {
+    return res.status(200).json(200, req.user, {
+      message: 'Current user fetched successfully',
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while getting the current user',
+      error: error,
+    })
+  }
+}
+
+const getUserDetails = async (req, res) => {
+  try {
+    const { fullName, email } = req.body
+
+    if (!fullName || !email) {
+      throw new createHttpError(
+        400,
+        'Full name, email and password are required',
+      )
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          fullName,
+          email,
+        },
+      },
+      {
+        new: true,
+      },
+    ).select('-password')
+
+    return res.status(200).json({
+      message: 'User details updated successfully',
+      userId: user._id,
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while getting the user details',
+      error: error,
+    })
+  }
+}
+
 export {
   userRegister,
   loginUser,
   logoutUser,
   refreshAccessToken,
   changeCurrentUserPassword,
+  getcurrentUser,
+  getUserDetails,
 }
