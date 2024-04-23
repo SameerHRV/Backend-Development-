@@ -1,6 +1,12 @@
 import createHttpError from 'http-errors'
 import { User } from '../models/user.model.js'
 import { uploadOnCloudinary } from '../config/cloudinary.js'
+import config from '../config/config.js'
+
+const options = {
+  httpOnly: true,
+  secure: true,
+}
 
 const generateAccessAndRefreshToken = async userId => {
   try {
@@ -154,11 +160,6 @@ const loginUser = async (req, res) => {
     '-password -refreshToken',
   )
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-  }
-
   return res
     .status(200)
     .cookie('accessToken', accessToken, options)
@@ -182,11 +183,6 @@ const logoutUser = async (req, res) => {
     },
   )
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-  }
-
   return res
     .status(200)
     .clearCookie('accessToken', options)
@@ -196,4 +192,50 @@ const logoutUser = async (req, res) => {
     })
 }
 
-export { userRegister, loginUser, logoutUser }
+const refreshAccessToken = async (req, res) => {
+  try {
+    const inCommingRefreshToken =
+      req.cookies.refreshToken || req.body.refreshToken
+
+    if (!inCommingRefreshToken) {
+      throw new createHttpError(401, 'Access token is required')
+    }
+
+    const decodedToken = jwt.verify(
+      inCommingRefreshToken,
+      config.jwt.jwtRefreshToken,
+    )
+
+    const user = await User.findById(decodedToken?._id).select(
+      '-password -refreshToken',
+    )
+
+    if (!user) {
+      throw new createHttpError(401, 'Invalid refresh token')
+    }
+
+    if (inCommingRefreshToken !== user?.refreshToken) {
+      throw new createHttpError(401, 'Refresh token is invalid or expired')
+    }
+
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshToken(user._id)
+
+    return res
+      .status(200)
+      .cookie('accessToken', accessToken, options)
+      .cookie('newRefreshToken', newRefreshToken, options)
+      .json(200, {
+        message: 'Access token refreshed successfully',
+        userId: user._id,
+      })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while refreshing the access token',
+      error: error,
+    })
+  }
+}
+
+export { userRegister, loginUser, logoutUser, refreshAccessToken }
