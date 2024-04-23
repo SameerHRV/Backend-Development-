@@ -332,6 +332,23 @@ const updatedUserAvatar = async (req, res) => {
       throw new createHttpError(400, 'Avatar file is required')
     }
 
+    // delete the old avatar
+    const oldAvatar = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $unset: {
+          avatar: 1,
+        },
+      },
+      {
+        new: true,
+      },
+    ).select('-password')
+
+    if (!oldAvatar.avatar) {
+      throw new createHttpError(400, 'Avatar file is required')
+    }
+
     const avatar = await uploadOnCloudinary(avatarLocalPath)
 
     if (!avatar.url) {
@@ -367,6 +384,23 @@ const updatedUserCoverImage = async (req, res) => {
     const coverImageLocalPath = req.file?.path
 
     if (!coverImageLocalPath) {
+      throw new createHttpError(400, 'Cover image file is required')
+    }
+
+    // delete the old cover image
+    const oldCoverImage = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $unset: {
+          coverImage: 1,
+        },
+      },
+      {
+        new: true,
+      },
+    ).select('-password')
+
+    if (!oldCoverImage.coverImage) {
       throw new createHttpError(400, 'Cover image file is required')
     }
 
