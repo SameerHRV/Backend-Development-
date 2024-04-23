@@ -238,4 +238,45 @@ const refreshAccessToken = async (req, res) => {
   }
 }
 
-export { userRegister, loginUser, logoutUser, refreshAccessToken }
+const changeCurrentUserPassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body
+
+    if (!oldPassword || !newPassword) {
+      throw new createHttpError(
+        400,
+        'Old password and new password are required',
+      )
+    }
+    const user = await User.findById(req.user?._id)
+    const isPasswordValid = await user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordValid) {
+      throw new createHttpError(401, 'Invalid old password')
+    }
+
+    user.password = newPassword
+    await user.save({
+      validateBeforeSave: false,
+    })
+
+    return res.status(200).json({
+      message: 'Password changed successfully',
+      userId: user._id,
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while changing the password',
+      error: error,
+    })
+  }
+}
+
+export {
+  userRegister,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentUserPassword,
+}
