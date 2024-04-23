@@ -324,6 +324,83 @@ const getUserDetails = async (req, res) => {
   }
 }
 
+const updatedUserAvatar = async (req, res) => {
+  try {
+    const avatarLocalPath = req.file?.path
+
+    if (!avatarLocalPath) {
+      throw new createHttpError(400, 'Avatar file is required')
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if (!avatar.url) {
+      throw new createHttpError(400, 'Avatar file is required')
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          avatar: avatar.url,
+        },
+      },
+      {
+        new: true,
+      },
+    ).select('-password')
+
+    return res.status(200).json({
+      message: 'User avatar updated successfully',
+      userId: user._id,
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while updating the user avatar',
+      error: error,
+    })
+  }
+}
+const updatedUserCoverImage = async (req, res) => {
+  try {
+    const coverImageLocalPath = req.file?.path
+
+    if (!coverImageLocalPath) {
+      throw new createHttpError(400, 'Cover image file is required')
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if (!coverImage.url) {
+      throw new createHttpError(400, 'Cover image file is required')
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          coverImage: coverImage.url,
+        },
+      },
+      {
+        new: true,
+      },
+    ).select('-password')
+
+    return res.status(200).json({
+      message: 'User cover image updated successfully',
+      user: user,
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while updating the user cover image',
+      error: error,
+    })
+  }
+}
+
 export {
   userRegister,
   loginUser,
@@ -332,4 +409,6 @@ export {
   changeCurrentUserPassword,
   getcurrentUser,
   getUserDetails,
+  updatedUserAvatar,
+  updatedUserCoverImage,
 }
