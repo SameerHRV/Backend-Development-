@@ -2,6 +2,31 @@ import createHttpError from 'http-errors'
 import { User } from '../models/user.model.js'
 import { uploadOnCloudinary } from '../config/cloudinary.js'
 
+const generateAccessAndRefreshToken = async userId => {
+  try {
+    const user = await User.findById(userId)
+    const accessToken = await user.generateAccessToken()
+    const refreshToken = await user.generateRefreshToken()
+
+    // user.accessToken = accessToken
+    user.refreshToken = refreshToken
+    await user.save({
+      validateBeforeSave: false,
+    })
+
+    return {
+      accessToken,
+      refreshToken,
+    }
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while generating access and refresh token',
+      error: error,
+    })
+  }
+}
+
 const userRegister = async (req, res) => {
   // get user details from frontend
   // validation - not empty
@@ -93,11 +118,92 @@ const userRegister = async (req, res) => {
 }
 
 const loginUser = async (req, res) => {
-  const { username, email, password } = req.body
+  try {
+    const { username, email, password } = req.body
+    if (!username && !email) {
+      throw new createHttpError(400, 'Username or email is required')
+    }
 
-  if (!username && !email) {
-    throw new createHttpError(400, 'Username or email is required')
+    const user = User.findOne({ $or: [{ username }, { email }] }).select(
+      '-password -refreshToken',
+    )
+
+    if (!user) {
+      throw new createHttpError(404, 'User not found')
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password)
+
+    if (!isPasswordValid) {
+      throw new createHttpError(401, 'Invalid password')
+    }
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user._id,
+    )
+
+    const logginedUser = User.findById(user._id).select(
+      '-password -refreshToken',
+    )
+
+    // cookie
+
+    const options = {
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      signed: true,
+    }
+
+    return res
+      .status(200)
+      .cookie('accessToken', accessToken, options)
+      .cookie('refreshToken', refreshToken, options)
+      .json(200, {
+        message: 'User logged in successfully',
+        userId: logginedUser._id,
+      })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while logging in the user',
+      error: error,
+    })
   }
 }
 
-export { userRegister }
+const logoutUser = async (req, res) => {
+  try {
+    User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        accessToken: null,
+        refreshToken: null,
+      },
+    })
+
+    const options = {
+      expires: new Date(Date.now() - 1000), // 24 hours
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      signed: true,
+    }
+
+    return res
+      .status(200)
+      .cookie('accessToken', '', options)
+      .cookie('refreshToken', '', options)
+      .json(200, {
+        message: 'User logged out successfully',
+      })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: 'Something went wrong while logging out the user',
+      error: error,
+    })
+  }
+}
+
+export { userRegister, loginUser, logoutUser }
