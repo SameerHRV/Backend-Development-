@@ -6,6 +6,7 @@ conf({
 
 const config = {
   port: process.env.PORT || 8000,
+  mongodbDbName: process.env.MONGODB_DB_NAME,
   mongodbUri: process.env.MONGODB_URI,
   cors: process.env.CORS_ORIGIN,
   jwt: {

@@ -11,7 +11,9 @@ const connectDB = async () => {
       console.log('Error to connecting mongodb database')
     })
 
-    const connectionInstance = await mongoose.connect(config.mongodbUri)
+    const connectionInstance = await mongoose.connect(config.mongodbUri, {
+      dbName: config.mongodbDbName,
+    })
     console.log(
       'MONGODB CONNECTION !! HOST => ',
       connectionInstance.connection.host,
